@@ -4,6 +4,10 @@ import tempfile
 import time
 from AFPILD_Predict import predict_locations, plot_footstep_locations
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+# Set animation embed limit to 50MB
+plt.rcParams['animation.embed_limit'] = 50
 
 # Initialize session state
 if 'stage' not in st.session_state:
@@ -23,20 +27,54 @@ def reset_app():
 # Page 1: File Upload
 def show_upload_page():
     st.title("Audio Footstep Localization")
-    st.write("Upload an audio file to predict footstep locations")
+    st.markdown("""
+        ### Welcome to the Audio Footstep Localization System
+        This tool helps you analyze audio recordings to:
+        - Detect individual footsteps
+        - Predict the location of each footstep
+        - Visualize movement patterns
+        
+    """)
     
-    uploaded_file = st.file_uploader("Choose an audio file", type=['wav'])
+    # Add custom CSS
+    st.markdown("""
+        <style>
+        .file-details {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .file-detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .file-detail-item:last-child {
+            border-bottom: none;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    uploaded_file = st.file_uploader("Choose an audio file", type=['wav'], 
+        help="Upload a WAV file")
     
     if uploaded_file is not None:
-        # Create a temporary file to store the uploaded audio
+        # Save uploaded file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
             st.session_state.tmp_file_path = tmp_file.name
         
-        st.success("File uploaded successfully!")
-        if st.button("Process Audio"):
-            st.session_state.stage = 2
-            st.rerun()
+        st.success("✅ File uploaded successfully!")
+        
+        # Center the process button
+        col1, col2, col3 = st.columns([1,1,1])
+        with col2:
+            if st.button("Process Audio", use_container_width=True):
+                st.session_state.stage = 2
+                st.rerun()
 
 # Page 2: Processing
 def show_processing_page():
@@ -49,22 +87,31 @@ def show_processing_page():
     # Simulate processing steps
     steps = [
         "Loading audio file...",
-        "Detecting footsteps...",
         "Extracting features...",
         "Making predictions...",
         "Generating visualization..."
     ]
     
-    for i, step in enumerate(steps):
-        status_text.text(step)
-        progress_bar.progress((i + 1) / len(steps))
-        time.sleep(1) 
+    status_text.text(steps[0])
+    progress_bar.progress(1 / len(steps))
+    time.sleep(1)
     
     try:
         # Make predictions
+        status_text.text(steps[1])
+        progress_bar.progress(2 / len(steps))
+        time.sleep(1)
+
+        status_text.text(steps[2])
+        progress_bar.progress(3 / len(steps))
+        time.sleep(1)
+
         predictions = predict_locations("best_model.h5", st.session_state.tmp_file_path)
         st.session_state.predictions = predictions
-        
+
+        status_text.text(steps[3])
+        progress_bar.progress(4 / len(steps))
+        time.sleep(1)
         # Move to results page
         st.session_state.stage = 3
         st.rerun()
@@ -80,22 +127,6 @@ def show_results_page():
     st.title("Footstep Localization Results")
     
     if st.session_state.predictions:
-        # Add CSS to style the container
-        st.markdown("""
-            <style>
-                .results-container {
-                    background-color: #f8f9fa;
-                    padding: 20px;
-                    border-radius: 10px;
-                    margin: 10px 0;
-                }
-                .stTable {
-                    background-color: white !important;
-                    border-radius: 5px !important;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-                }
-            </style>
-        """, unsafe_allow_html=True)
 
         # Add metrics at the top
         metrics_cols = st.columns(4)
@@ -112,13 +143,24 @@ def show_results_page():
         most_common_subject = max(set(subjects), key=subjects.count)
         subject_confidence = (subjects.count(most_common_subject) / len(subjects)) * 100
 
-        # Display subject identification prominently
-        st.markdown(f"""
-            <div style='padding: 20px; background-color: #e6f3ff; border-radius: 10px; margin-bottom: 20px; text-align: center;'>
-                <h2 style='margin: 0;'>Subject Identified: Person {most_common_subject}</h2>
-                <p style='margin: 5px 0 0 0;'>Confidence: {subject_confidence:.1f}%</p>
+        # Create a styled info box for subject identification
+        subject_info_html = f"""
+            <div style='
+                padding: 20px;
+                background-color: #e6f3ff;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                text-align: center;
+            '>
+                <h2 style='margin: 0;'>
+                    Subject Identified: Person {most_common_subject}
+                </h2>
+                <p style='margin: 5px 0 0 0;'>
+                    Confidence: {subject_confidence:.1f}%
+                </p>
             </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(subject_info_html, unsafe_allow_html=True)
 
         with metrics_cols[0]:
             st.metric("Total Steps", f"{total_steps}")
