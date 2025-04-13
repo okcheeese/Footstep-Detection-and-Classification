@@ -20,27 +20,26 @@ class CNNAnomalyDetector(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.dropout(torchfunc.relu(self.fc1(x)))
         return self.fc2(x)
-    
 
-def preprocess_audio(file_path, n_mels=64, max_len=400):
-    waveform, sr = torchaudio.load(file_path)
+    @staticmethod
+    def preprocess_audio(file_path, n_mels=64, max_len=400):
+        waveform, sr = torchaudio.load(file_path)
 
-    if waveform.shape[0] > 1:
-        waveform = torch.mean(waveform, dim=0, keepdim=True)
+        if waveform.shape[0] > 1:
+            waveform = torch.mean(waveform, dim=0, keepdim=True)
 
-    mel_spectrogram = torchaudio.transforms.MelSpectrogram(n_mels=n_mels)
-    mel = mel_spectrogram(waveform).squeeze(0)
+        mel_spectrogram = torchaudio.transforms.MelSpectrogram(n_mels=n_mels)
+        mel = mel_spectrogram(waveform).squeeze(0)
 
-    if mel.shape[1] < max_len:
-        mel = torchfunc.pad(mel, (0, max_len - mel.shape[1]))
-    else:
-        mel = mel[:, :max_len]
+        if mel.shape[1] < max_len:
+            mel = torchfunc.pad(mel, (0, max_len - mel.shape[1]))
+        else:
+            mel = mel[:, :max_len]
 
-    return mel.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, 64, 400]
-
+        return mel.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, 64, 400]
 
 def predict(file_path):
-    input_tensor = preprocess_audio(file_path).to(device)
+    input_tensor = CNNAnomalyDetector.preprocess_audio(file_path).to(device)
     with torch.no_grad():
         output = model(input_tensor)
         pred = torch.argmax(output, dim=1).item()
@@ -59,4 +58,3 @@ def detect_anomaly(audio_file):
     prediction = predict(audio_file)
     return bool(prediction)  # 1 indicates anomaly, 0 indicates normal
 
-print(detect_anomaly("s03_1_footstep_audio.wav"))
