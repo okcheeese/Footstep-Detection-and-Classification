@@ -15,13 +15,6 @@ The model takes two types of input features:
 1. GCC-PHAT (Generalized Cross-Correlation with Phase Transform) features
 2. Mel-spectrogram features
 
-## Requirements
-
-Install the required dependencies using:
-```bash
-pip install -r requirements.txt
-```
-
 ## Usage
 
 ```python
